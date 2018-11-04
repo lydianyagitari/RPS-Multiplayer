@@ -1,0 +1,44 @@
+.playerSection {
+	height: 400px;
+}
+
+.revealIcon {
+	font-size: 180px !important;
+}
+
+#info .section {
+	height: 150px;
+}
+
+#chatBox {
+	height: 160px;
+	text-align: left;
+	overflow-y: scroll;
+}
+h2{
+color: darkred;
+font-style: italic;
+}
+#sendChat {
+	margin: 25px 5px 0 0;
+    font-size: 30px;
+    color: brown;
+    font-weight: 200;
+}
+.player1{
+    color: darkred;
+    font-style: italic;
+    font-size: 30;
+    
+}
+#chatInput {
+	margin-left: 5px;
+}
+
+#replyIcon {
+	font-size: 10px;
+}
+
+.input-field.col #chatInput + label {
+	left: 1.75rem;
+}

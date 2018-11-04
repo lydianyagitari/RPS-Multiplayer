@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RPS-Multiplayer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/css/materialize.min.css">
+    <link rel="stylesheet" type="text/css" href="assets/css/style.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.0.0/firebase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js"></script>
+    <script src="https://use.fontawesome.com/861fff49c6.js"></script>
+         
+</head>
+<body>
+	<header class="container">
+		<div class="card-panel teal lighten-2 center">
+			<h2>Rock Paper Scissors</h2>
+		</div>			
+	</header>
+	<section id="subHead" class="container">
+		<form>
+			<div class="row">
+				<div class="input-field col s6 offset-s3">
+				  <input id="playerNameInput" type="text">
+				  <label for="playerNameInput">
+				  	<i class="fa fa-user-circle" aria-hidden="true"></i>
+				  	First Name
+				  </label>
+				</div>
+			</div>
+			<div class="row">
+				<button class="waves-effect waves-light btn col s2 offset-s5" id="addPlayer" type="submit">Join
+					<i class="fa fa-sign-in" aria-hidden="true"></i>
+				</button>
+			</div>
+		</form>
+	</section>
+	<section id="playerRow" class="container">
+		<div class="row">
+			<div id="player1" player="player1" class="col s3 card-panel playerSection">
+				<h5 class="center">Player 1</h5>
+				<p class="center">Wins: <span id="player1w"></span></p>
+				<p class="center">Losses: <span id="player1l"></span></p>
+				<div class="subCont center"></div>	
+			</div>
+			<div class="col s1"></div>
+			<div id="info" class="col s4 card-panel playerSection">
+				<div class="section center">
+				  <h5>Status</h5>
+				  <div class="divider"></div>
+				  <p>Stuff</p>
+				</div>
+				<div class="row center">
+					Chat
+					<div id="chatBox" class="col s12">
+					</div>
+					<form class="row">
+						<div class="input-field col s8">
+						  <input id="chatInput" type="text">
+						  <label for="chatInput">
+						  	<i class="fa fa-comment-o" aria-hidden="true"></i>
+						  	You welcome to trash talk here...
+						  </label>
+						</div>
+						<button class="waves-effect waves-light btn col s3" id="sendChat" type="submit">Send
+							<i id="replyIcon" class="fa fa-reply" aria-hidden="true"></i>
+						</button>
+					</form>
+				</div>
+			</div>
+			<div class="col s1"></div>
+			<div id="player2" player="player2" class="col s3 card-panel playerSection">
+			    <h5 class="center">Player 2</h5>
+			    <p class="center">Wins: <span id="player2w"></span></p>
+			    <p class="center">Losses: <span id="player2l"></span></p>
+				<div class="subCont center"></div>	
+			</div>
+		</div>
+	</section>
+	
+	<script src="assets/javascript/game.js"></script>
+</body>
+</html>
