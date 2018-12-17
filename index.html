@@ -1,85 +1,150 @@
-<!doctype html>
-<html lang="en-us">
 
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>RPS-Multiplayer</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/css/materialize.min.css">
-    <link rel="stylesheet" type="text/css" href="assets/css/style.css">
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script src="https://www.gstatic.com/firebasejs/4.0.0/firebase.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js"></script>
-    <script src="https://use.fontawesome.com/861fff49c6.js"></script>
-         
+	<meta charset="UTF-8">
+	<title>Multi-Player RPS!</title>
+
+	<!-- Link to the jQuery Library -->
+  	<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+
+  	<!-- Links to Firebase -->
+  	<script src="https://www.gstatic.com/firebasejs/live/3.6/firebase.js"></script>
+    <script src="js/config.js"></script>
+
+    <!-- Link to the Bootstrap Library -->
+  	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+	<!-- Links to an dditional CSS Stylesheet -->
+	<link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-	<header class="container">
-		<div class="card-panel teal lighten-2 center">
-			<h2>Rock Paper Scissors</h2>
-		</div>			
-	</header>
-	<section id="subHead" class="container">
-		<form>
-			<div class="row">
-				<div class="input-field col s6 offset-s3">
-				  <input id="playerNameInput" type="text">
-				  <label for="playerNameInput">
-				  	<i class="fa fa-user-circle" aria-hidden="true"></i>
-				  	First Name
-				  </label>
-				</div>
-			</div>
-			<div class="row">
-				<button class="waves-effect waves-light btn col s2 offset-s5" id="addPlayer" type="submit">Join
-					<i class="fa fa-sign-in" aria-hidden="true"></i>
-				</button>
-			</div>
-		</form>
-	</section>
-	<section id="playerRow" class="container">
-		<div class="row">
-			<div id="player1" player="player1" class="col s3 card-panel playerSection">
-				<h5 class="center">Player 1</h5>
-				<p class="center">Wins: <span id="player1w"></span></p>
-				<p class="center">Losses: <span id="player1l"></span></p>
-				<div class="subCont center"></div>	
-			</div>
-			<div class="col s1"></div>
-			<div id="info" class="col s4 card-panel playerSection">
-				<div class="section center">
-				  <h5>Status</h5>
-				  <div class="divider"></div>
-				  <p>Stuff</p>
-				</div>
-				<div class="row center">
-					Chat
-					<div id="chatBox" class="col s12">
-					</div>
-					<form class="row">
-						<div class="input-field col s8">
-						  <input id="chatInput" type="text">
-						  <label for="chatInput">
-						  	<i class="fa fa-comment-o" aria-hidden="true"></i>
-						  	You welcome to trash talk here...
-						  </label>
+
+	<!-- Overall Bootstrap Grid -->
+  	<div class="container">
+
+  		<!-- Jumbotron with Title -->
+	  	<div class="jumbotron">
+	      <h1 class="text-center"><strong>Welcome to Rock-Paper-Scissors!</strong></h1>
+	      <h2 class="text-center">Enter your name to start the game</h2>
+	    </div> <!-- End Jumbotron -->
+
+	    <!-- Player Name Section -->
+	    <div class="formPanel"> 
+        	<form id="name-form">
+          		<input type="text" id="name-input" placeholder="Your Name">
+          		<input id="add-name" type="submit" value="Submit">
+        	</form>
+      	</div> <!-- End Player Name Section  -->
+
+	   	<!-- Game Data Section -->
+		<div class="panel panel-default">
+		    <div class="row"> <!-- Game Data Row -->
+
+		    	<!-- Player 1 Section -->
+		        <div class="col-lg-4 col-md-4 col-sm-4">
+		            <div class="panel panel-default playerPanel" id="playerPanel1">
+		                <div class="panel-heading panelName">
+							<h3 class="panel-title text-center" id="playerOneName"></h3>
 						</div>
-						<button class="waves-effect waves-light btn col s3" id="sendChat" type="submit">Send
-							<i id="replyIcon" class="fa fa-reply" aria-hidden="true"></i>
-						</button>
-					</form>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Rock</div>
+		                </div>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Paper</div>
+		                </div>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Scissors</div>
+		                </div>
+
+
+		                <div class="panel-body panelStats text-center">
+		                	<div class="stats" id="player1Stats"></div>
+		                </div>
+		            </div>
+		        </div> <!-- End Player 1 Section -->
+		        
+		        <!-- Game Outcome Section -->
+		        <div class="col-lg-4 col-md-4 col-sm-4">
+		            <div class="panel panel-default gamePanel">
+		            	<h3 class="panel-title text-center" id="waitingNotice"></h3>
+		            	<h3 class="panel-title text-center" id="roundOutcome">Rock-Paper-Scissors</h3>
+		            </div>
+		        </div> <!-- End Game Outcome Section -->
+		        
+		        <!-- Player 2 Section -->
+		        <div class="col-lg-4 col-md-4 col-sm-4">
+		            <div class="panel panel-default playerPanel" id="playerPanel2">
+		                <div class="panel-heading panelName">
+							<h3 class="panel-title text-center" id="playerTwoName"></h3>
+						</div>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Rock</div>
+		                </div>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Paper</div>
+		                </div>
+
+		                <div class="panel-body panelOption text-center">
+		                	<div class="option">Scissors</div>
+		                </div>
+
+
+		                <div class="panel-body panelStats text-center">
+		                	<div class="stats" id="player2Stats"></div>
+		                </div>
+		            </div>
+		        </div> <!-- End Player 2 Section -->
+		        
+		    </div> <!-- Game Data Row -->
+		</div> <!-- End Game Data Section  -->
+
+	    <!-- Chat Section -->
+	    <div class="row">
+
+	    	<div class="col-lg-8 col-md-8 col-sm-8">
+	    		<div id="chatDisplay"></div>
+	    	</div>
+
+		    <div class="col-lg-4 col-md-4 col-sm-4"> 
+		    	<div class="chatInput">
+		    		<div class="chatLabel">Type Your Message!</div>
+
+					<div class="chatPanel"> 
+						<form id="chat-form">
+							<textarea type="text" id="chat-input"></textarea>
+							<input id="chat-send" type="submit" value="Send">
+						</form>
+					</div>
 				</div>
-			</div>
-			<div class="col s1"></div>
-			<div id="player2" player="player2" class="col s3 card-panel playerSection">
-			    <h5 class="center">Player 2</h5>
-			    <p class="center">Wins: <span id="player2w"></span></p>
-			    <p class="center">Losses: <span id="player2l"></span></p>
-				<div class="subCont center"></div>	
-			</div>
-		</div>
-	</section>
-	
-	<script src="assets/javascript/game.js"></script>
+	      	</div> <!-- End Player Name Section  -->
+
+	    </div> <!-- End Chat Section  -->
+
+	    <!-- footer -->
+	    <div class="row">
+
+	      <div id="footerSpacer">
+	      </div>
+
+	      <div class="footer navbar-fixed-bottom" id="footerPanel">
+	        <div class="copyright">
+	          © 2018 Lydia Nyagitari
+	        </div>
+	      </div>
+
+	    </div> <!-- End the footer row -->
+
+	</div> <!-- End Bootstrap Grid -->
+
+	<!-- js script file -->
+	<script type="text/javascript" src="js/app.js"></script>
+
 </body>
 </html>
