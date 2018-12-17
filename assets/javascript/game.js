@@ -1,330 +1,363 @@
-//------------- Setup ----------------
+var player1Connected = false;
+var player2Connected = false;
+var player = 0;
+var turn = 0;
+var player1Name = "";
+var player2Name = "";
+var rWins = "Scissors";
+var pWins = "Rock";
+var sWins = "Paper";
+var images = {
+    Rock: "./assets/images/icons8-rock-filled-100.png",
+    Paper: "./assets/images/icons8-powerpoint-100.png",
+    Scissors: "./assets/images/icons8-cutting-100.png"
+};
+var timerId = 0;
+var chat = [];
+var statusRef1;
+var statusRef2;
 
+$(document).ready(function() {
 
-//init firebase
-var config = {
-    apiKey: "AIzaSyDz7TigPbAyO6h-8FY7268OjEG09BN1tZc",
-    authDomain: "lydianyproject.firebaseapp.com",
-    databaseURL: "https://lydianyproject.firebaseio.com",
-    projectId: "lydianyproject",
-    storageBucket: "lydianyproject.appspot.com",
-    messagingSenderId: "547175406524"
-  };
-firebase.initializeApp(config);
+    //Hide choices.
+    $(".choices").hide();
+    $(".chosen").hide();
 
-// Create a variable to reference the database.
-const database = firebase.database();
+    // Initialize Firebase.
+    var config = {
+        apiKey: "AIzaSyCGedS-eXOY3alApgtMk_cWyFlaxtsEuwA",
+        authDomain: "rockpaper-611cc.firebaseapp.com",
+        databaseURL: "https://rockpaper-611cc.firebaseio.com",
+        projectId: "rockpaper-611cc",
+        storageBucket: "",
+        messagingSenderId: "284046562557"
+    };
 
-//------------- DB listeners ------------
+    firebase.initializeApp(config);
 
-//listen for state changes, if resolving game win, do tons of stuff
-database.ref('/curGame/state').on('value', function(snap) {
-    //localize state for sync ref
-    go.localState = snap.val();
-    if (go.localState === 'playerSelect') {
-        $('#info p').html('Waiting for players...')
-    } else if (go.localState === 'play') {
-        $('#info p').html('Waiting for each player to select a throw.')
-    } else if (go.localState === 'reveal'){
-        database.ref('/curGame').once('value', function(snap){
-            //grab both player objs
-            let p1 = snap.val().player1;
-            let p2 = snap.val().player2;
-            //reveal choices to players (dom)
-            go.revealChoices(p1.choice, p2.choice);
-            //figure out who won and lost return an obj, unless its a tie
-            let result = go.determineWinner(p1.choice, p2.choice)
-            //reveal to players the results (dom)
-            go.revealWinner(result);
-            //if the game is not a tie, update db with scores, db event will trigger page update
-            if (result !== 'Tie' && go.playerID === 1) {
-                go.updateScore(result)
-            }
-            //set brief timeout, then move to next round
-            setTimeout(go.resetRound, 4000);
-        })
-    }
-});
+    var database = firebase.database();
 
-//listen for player connections, then update page with names
-database.ref('/player1Conn').on('value', function(snap){
-    console.log(snap.val())
-    if (snap.val()) {
-        let header = $('#player1 h5');
-        database.ref('/curGame/player1').once("value", function(snap){
-            header.text(snap.val().name);
-        })
-    }
-})
+    //Get a reference to the chat element.
+    var chatRef = database.ref("multi-rps/chat");
+    chatRef.onDisconnect().remove();
 
-//listen for player connections, then update page with names
-database.ref('/player2Conn').on('value', function(snap){
-    if (snap.val()) {
-        let header = $('#player2 h5');
-        database.ref('/curGame/player2').once("value", function(snap){
-            header.text(snap.val().name);
-        })
-    }
-})
+    //Handle updates to chat.
+    chatRef.on("child_added", function(data) {
 
-//score listeners to update page, an experiment with verbosity vs specificity :)
-database.ref('/curGame/player1/wins').on('value', function(snap){
-    $('#player1w').text(snap.val())
-})
+        var text = data.val().message;
+        $("#chatLog").val($("#chatLog").val() + String.fromCharCode(13, 10) + text);
 
-database.ref('/curGame/player1/losses').on('value', function(snap){
-    $('#player1l').text(snap.val())
-})
+        $("#chatLog").scrollTop($("#chatLog")[0].scrollHeight);
+    });
 
-database.ref('/curGame/player2/wins').on('value', function(snap){
-    $('#player2w').text(snap.val())
-})
+    var currentTurnRef = database.ref("multi-rps/turn");
 
-database.ref('/curGame/player2/losses').on('value', function(snap){
-    $('#player2l').text(snap.val())
-})
+    database.ref().on("value", function(snapshot) {
 
-//------------- Main Object -----------
+        if (snapshot.child("multi-rps/players/1").exists()) {
 
-let go = {
-    playerID: 0,
-    localState: 'playerSelect',
-    choices: ['Rock', 'Paper', 'Scissors'],
-    winList : {
-        //phrases to display after results
-        rock : {
-            scissors : "Rock crushes Scissors.",
-            
-        },
-        paper : {
-            rock : "Paper covers Rock.",
-        },
-        scissors : {
-            paper : "Scissors cuts Paper.",
-        },
-        
-    },
-    revealChoices: function (ply1, ply2) {
-        let players = {
-            '#player1': ply1,
-            '#player2': ply2
-        };
-        Object.keys(players).forEach(function (key, value) {
-            let div = $(key+' .subCont');
-            //clear before adding anything
-            div.empty();
-            //make elements
-            let divChoice = $('<i>').addClass('fa fa-hand-'+players[key].toLowerCase()+'-o revealIcon').attr('aria-hidden','true');
-            div.append(divChoice)
-        })
-    },
-    determineWinner: function (ply1, ply2) {
-        //func to compare and get result
-        let p1 = this.choices.indexOf(ply1);
-        let p2 = this.choices.indexOf(ply2);
-        let n = this.choices.length;
-        let res = (n + p1 - p2) % n;
-        let message;
-        if (res === 0) {
-            return 'Tie'
-        } else if (res % 2 === 1) {
-            //player 1 wins
-            message = this.winList[ply1.toLowerCase()][ply2.toLowerCase()];
-            console.log(message)
-            return {winner:'player1', loser: 'player2', msg: message}
-        } else if (res % 2 === 0) {
-            //player 2 wins
-            message = this.winList[ply2.toLowerCase()][ply1.toLowerCase()];
-            console.log(message)
-            return {winner: 'player2', loser: 'player1', msg: message}
-        }
-    },
-    revealWinner: function (result) {
-        if (result.winner === 'player1') {
-            $('#info p').html("Player 1 wins!</br>"+result.msg)
-        } else if (result.winner === 'player2') {
-            $('#info p').html("Player 2 wins!</br>"+result.msg)
+            player1Connected = true;
+            var name = snapshot.child("multi-rps/players/1").val().name;
+            var player1Wins = snapshot.child("multi-rps/players/1").val().wins;
+            var player1Losses = snapshot.child("multi-rps/players/1").val().losses;
+            $("#box1row1").text(name);
+            player1Name = name;
+            $("#box1row3").text(`Wins: ${player1Wins} Losses: ${player1Losses}`);
         } else {
-            $('#info p').html("Tie!")
+            player1Connected = false;
+            $("#box1row1").text("Waiting for Player 1");
         }
-    },
-    updateScore: function (result) {
-        function pushUpdate (winner, w, loser, l) {
-            database.ref('/curGame/'+winner).update({
-                wins: w
-            })
-            database.ref('/curGame/'+loser).update({
-                losses: l
-            })
+
+        if (snapshot.child("multi-rps/players/2").exists()) {
+
+            player2Connected = true;
+            var name = snapshot.child("multi-rps/players/2").val().name;
+            var player2Wins = snapshot.child("multi-rps/players/2").val().wins;
+            var player2Losses = snapshot.child("multi-rps/players/2").val().losses;
+            $("#box3row1").text(name);
+            player2Name = name;
+            $("#box3row3").text(`Wins: ${player2Wins} Losses: ${player2Losses}`);
+        } else {
+            player2Connected = false;
+            $("#box3row1").text("Waiting for Player 2");
         }
-        database.ref('/curGame').once('value', function(snap){
-            let w = snap.val()[result.winner].wins + 1;
-            let l = snap.val()[result.loser].losses + 1;
-            console.log('update db')
-            console.log('-winner',result.winner, w)
-            console.log('-loser',result.loser, l)
-            pushUpdate(result.winner, w, result.loser, l);
-        })
-    },
-    resetRound: function () {
-        database.ref('/curGame').update({
-            state : 'play',
-            choices : 0
-        })
-        // empty play area, remake buttons for right player
-        $('.playerSection .subCont').empty();
-        buildButtons('player'+go.playerID);
-    }
-}
 
-function changeState(state) {
-    database.ref('/curGame').update({
-        state : state
-    })
-}
+        if (snapshot.child("multi-rps/turn").exists()) {
 
-//------------- button for player join and initial state logic pattern
-// its a mess, I would have refactored this given more time and no group project
+            var updatedTurn = parseInt(snapshot.child("multi-rps/turn").val());
 
-$('#addPlayer').on('click', function(){
-    event.preventDefault();
+            if (turn !== 3 && updatedTurn === 3) {
 
-    function choosePlayerNumber (callback) {
-        database.ref().once("value").then(function(snap){
-            if (!snap.val().player1Conn){
-                callback("player1")
-                go.playerID = 1;
-            } else if (!snap.val().player2Conn){
-                callback("player2")
-                go.playerID = 2;
-                changeState('play')      
-            } else {
-                callback("max");
+                turn = 3;
+
+                compareResults(snapshot);
+
+                timerId = setTimeout(nextRound, 5000);
+
+            } else if (turn !== 1 && updatedTurn === 1) {
+
+                turn = 1;
+
+                $("#box3border").css({
+                    "border-color": "black"
+                });
+                $("#box1border").css({
+                    "border-color": "lightgreen"
+                });
+
+                if (player === 1) {
+
+                    $("#systemMessage2").html(`<h5>It's your turn!</h5>`);
+
+                    $("#box1row2").children(".choices").show();
+                    $("#box1row2").children(".chosen").hide();
+                } else {
+                    $("#systemMessage2").html(`<h5>Waiting for ${player1Name} to choose.</h5>`);
+                }
+
+            } else if (turn !== 2 && updatedTurn === 2) {
+
+                turn = 2;
+
+                $("#box1border").css({
+                    "border-color": "black"
+                });
+                $("#box3border").css({
+                    "border-color": "lightgreen"
+                });
+
+                if (player === 2) {
+
+                    $("#systemMessage2").html(`<h5>It's your turn!</h5>`);
+
+                    $("#box3row2").children(".choices").show();
+                    $("#box3row2").children(".chosen").hide();
+                } else {
+                    $("#systemMessage2").html(`<h5>Waiting for ${player2Name} to choose.</h5>`);
+                }
             }
+        }
+
+    }, function(errorObject) {
+
+        console.log("Errors handled: " + errorObject.code);
+    });
+
+    $("#startButton").on("click", function(event) {
+
+        event.preventDefault();
+
+        var userName = $("#userName").val().trim();
+
+        if (userName === undefined || userName === "") {
+
+            alert("Please type your name and then click start.");
+
+        } else {
+
+            $("#userName").val("");
+            $("#userName").hide();
+            $("#startButton").hide();
+
+            if (player1Connected && player2Connected) {
+
+                alert("Sorry, Game Full! Try Again Later!");
+
+            } else if (!player1Connected) {
+
+                player1Connected = true;
+                player = 1;
+                statusRef1 = database.ref("multi-rps/players/1");
+                statusRef1.set({
+                    'losses': 0,
+                    'name': userName,
+                    'wins': 0,
+                    'choice': null
+                });
+                statusRef1.onDisconnect().remove();
+
+                if (player2Connected) {
+                    database.ref("multi-rps").update({
+                        'turn': 1
+                    });
+                }
+
+                $("#systemMessage1").html(`<h5>Hi ${userName}! You are Player 1</h5>`);
+
+            } else if (!player2Connected) {
+
+                player2Connected = true;
+                player = 2;
+                statusRef2 = database.ref("multi-rps/players/2");
+                statusRef2.set({
+                    'losses': 0,
+                    'name': userName,
+                    'wins': 0
+                });
+                statusRef2.onDisconnect().remove();
+
+                database.ref("multi-rps").update({
+                    'turn': 1
+                });
+
+                $("#systemMessage1").html(`<h5>Hi ${userName}! You are Player 2</h5>`);
+
+            }
+            currentTurnRef.onDisconnect().remove();
+        }
+
+    });
+
+    $(".choices").on("click", function(event) {
+
+        var val = $(this).attr("value");
+
+        database.ref("multi-rps/players/" + player).update({
+            'choice': val
+        });
+
+        var boxRow = "";
+        if (player === 1) {
+            boxRow = "#box1row2";
+        } else if (player === 2) {
+            boxRow = "#box3row2";
+        }
+        $(boxRow).children(".choices").hide();
+
+        var chosen = $(boxRow).children(".chosen");
+        var img = $("<img>");
+        img.attr("src", images[val]);
+        img.css({
+            alt: val,
+            height: "75px",
+            width: "75px"
+        });
+        if (val === "Paper") {
+            img.addClass("animated flipInY");
+        } else if (val === "Rock") {
+            img.addClass("animated bounce");
+        } else if (val === "Scissors") {
+            img.addClass("animated shake");
+        }
+        chosen.empty();
+        var par = $("<p>");
+        par.text(val);
+        chosen.append(par);
+        chosen.append(img);
+        chosen.show();
+
+        database.ref("multi-rps").update({
+            'turn': turn + 1
+        });
+
+    });
+
+    $("#chat").on("click", function(event) {
+
+        event.preventDefault();
+
+        if (player1Connected && player2Connected) {
+
+            var text = $("#text").val();
+            $("#text").val("");
+            if (player === 1) {
+                text = player1Name + ": " + text;
+            } else {
+                text = player2Name + ": " + text;
+            }
+
+            var newKey = database.ref().child("multi-rps/chat").push().key;
+            var updates = {};
+            updates["multi-rps/chat/" + newKey] = {
+                message: text
+            };
+
+            database.ref().update(updates);
+        }
+    });
+
+    function compareResults(snapshot) {
+
+        var choice1 = snapshot.child("multi-rps/players/1").val().choice;
+        var choice2 = snapshot.child("multi-rps/players/2").val().choice;
+        var wins1 = parseInt(snapshot.child("multi-rps/players/1").val().wins);
+        var wins2 = parseInt(snapshot.child("multi-rps/players/2").val().wins);
+        var losses1 = parseInt(snapshot.child("multi-rps/players/1").val().losses);
+        var losses2 = parseInt(snapshot.child("multi-rps/players/2").val().losses);
+
+        if (choice1 === choice2) {
+
+            // Tie game.
+            $("#result").html("<p class='mx-auto animated swing'>Tie Game!</p>");
+
+        } else if ((choice1 === "Rock" && choice2 === rWins) ||
+            (choice1 === "Paper" && choice2 === pWins) ||
+            (choice1 === "Scissors" && choice2 === sWins)) {
+
+            $("#result").html("<p class='mx-auto animated zoomInDown'>" +
+                player1Name + " Wins!</p>");
+            wins1++;
+            losses2++;
+
+        } else if ((choice2 === "Rock" && choice1 === rWins) ||
+            (choice2 === "Paper" && choice1 === pWins) ||
+            (choice2 === "Scissors" && choice1 === sWins)) {
+
+            $("#result").html("<p class='mx-auto animated zoomInDown'>" +
+                player2Name + " Wins!</p>");
+            wins2++;
+            losses1++;
+        }
+
+        var boxRow = "";
+        var val = "";
+        if (player === 1) {
+            boxRow = "#box3row2";
+            val = choice2;
+        } else if (player === 2) {
+            boxRow = "#box1row2";
+            val = choice1;
+        }
+
+        var chosen = $(boxRow).children(".chosen");
+        var img = $("<img>");
+        img.attr("src", images[val]);
+        img.css({
+            alt: val,
+            height: "75px",
+            width: "75px"
+        });
+        if (val === "Paper") {
+            img.addClass("animated flipInY");
+        } else if (val === "Rock") {
+            img.addClass("animated bounce");
+        } else if (val === "Scissors") {
+            img.addClass("animated shake");
+        }
+        chosen.empty();
+        var par = $("<p>");
+        par.text(val);
+        chosen.append(par);
+        chosen.append(img);
+        chosen.show();
+
+        database.ref("multi-rps/players/1").update({
+            'wins': wins1,
+            'losses': losses1
+        });
+        database.ref("multi-rps/players/2").update({
+            'wins': wins2,
+            'losses': losses2
         });
     }
 
-    function setEnv (playerNumber) {
-        console.log('callback', playerNumber);
-        addPlayerToDB(playerNumber);
-        setPlayerElems(playerNumber);
+    function nextRound() {
+
+        $(".chosen").hide();
+        $("#result").empty();
+
+        database.ref("multi-rps").update({
+            'turn': 1
+        });
     }
-
-    function addPlayerToDB (plyNum) {
-        if (plyNum !== 'max') {
-            let player = database.ref("/curGame/"+plyNum).set({
-                name: name,
-                wins: 0,
-                losses: 0,
-                choice: ""
-            })
-
-            plyerDBUpdate = {};
-            plyerDBUpdate['/'+plyNum+'Conn'] = true;
-            playerID = database.ref().update(plyerDBUpdate);
-
-            plyerDBUpdate['/'+plyNum+'Conn'] = false;
-            database.ref().onDisconnect().update(plyerDBUpdate);
-            database.ref('/curGame').onDisconnect(function(){
-                go.playerID = 0;
-            }).update({
-                state : "playerSelect",
-                choices : 0
-            })
-            database.ref("/curGame/"+plyNum).onDisconnect().remove()
-        }
-    }
-
-    function setPlayerElems (playNum) {
-        $('#subHead').empty();
-        let newElem = $('<div>').addClass('center');
-        newElem.append($('<h5>').text('Welcome, ' + name + '!'));
-        
-        //determine text for sub header
-        let welcomeText;
-        if (playNum === 'player1') {
-            welcomeText = 'You are player 1.'
-        } else if (playNum === 'player2') {
-            welcomeText = 'You are player 2.'
-        } else {
-            welcomeText = "Sorry, maximum players reached. Multiple game instances not yet implemented."
-        }
-
-        newElem.append($('<p>').text(welcomeText));
-        $('#subHead').append(newElem);
-        $('#'+playNum+' h5').text(name);
-        buildButtons(playNum,name);
-    }
-
-    let name = $('#playerNameInput').val().trim();
-    if (name !== '') {
-        choosePlayerNumber(setEnv);
-    }
-})
-
-function buildButtons (playerNum) {
-    //set up some aliases
-    let btnClasses = 'waves-effect waves-light btn col s6 offset-s3';
-    let btnDiv = $('#'+playerNum+' .subCont');
-    //clear before adding anything
-    btnDiv.empty();
-
-    go.choices.forEach(function(value, index){
-        //make a row and button, then append both to main
-        let curRow = $('<div>').addClass('row');
-        let icon = $('<i>').addClass('fa fa-hand-'+value.toLowerCase()+'-o').attr('aria-hidden','true');
-        let curBtn = $('<button>').addClass(btnClasses).attr('type',value).text(value+' ');
-        curBtn.on('click', function(){
-            let ancestor = $(this).closest('.card-panel');
-            console.log('click', ancestor.attr('player') )
-            if (go.localState === 'play') {
-                manageChoice(ancestor.attr('player'), $(this).attr('type'))
-                $('#'+playerNum+' .subCont').empty();
-            }
-        })
-        btnDiv.append(curRow.append(curBtn.append(icon)));
-    })
-}
-
-function manageChoice (plyNum, plyChoice) {
-    function updateChoice (c) {
-        database.ref('/curGame/'+plyNum).update({
-            choice : plyChoice
-        })
-        database.ref('/curGame').update({
-            choices : c + 1
-        })
-    }
-
-    database.ref('/curGame/choices').once('value', function(snap){
-        let choices = snap.val();
-        if (choices === 0 ) {
-            updateChoice(choices);
-        } else if (choices === 1 ) {
-            updateChoice(choices);
-            changeState('reveal');
-        }
-    })
-}
-
-//chat stuff
-$('#sendChat').on('click', function(){
-    event.preventDefault();
-    let msg = $('#chatInput').val().trim();
-    $('#chatInput').val('')
-    if (go.playerID !== 0 && msg !== ''){
-        database.ref('/curGame/player'+go.playerID).once('value', function(snap){
-            let name = snap.val().name;
-            let chat = database.ref('/chat').push()
-            chat.set({
-                name : name,
-                msg : msg
-            })
-        })
-    }
-})
-
-database.ref('/chat').on('child_added', function (snap) {
-    $('#chatBox').prepend($('<div>').text(snap.val().name+': '+snap.val().msg));
-    database.ref('/chat').onDisconnect().remove();
-})
+});
